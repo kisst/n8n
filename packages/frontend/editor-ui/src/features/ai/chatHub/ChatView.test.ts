@@ -12,7 +12,7 @@ import {
 import ChatView from './ChatView.vue';
 import * as chatApi from './chat.api';
 import userEvent from '@testing-library/user-event';
-import { waitFor, within } from '@testing-library/vue';
+import { within } from '@testing-library/vue';
 
 /**
  * ChatView.vue Tests
@@ -59,6 +59,7 @@ vi.mock('./chat.api');
 
 // Create a reactive route object that can be shared
 import { reactive } from 'vue';
+import type { EnrichedStructuredChunk } from '@n8n/api-types';
 const mockRoute = reactive<{ params: Record<string, any>; query: Record<string, any> }>({
 	params: {},
 	query: {},
@@ -88,18 +89,38 @@ const renderComponent = createComponentRenderer(ChatView);
 
 describe('ChatView', () => {
 	let pinia: ReturnType<typeof createPinia>;
+	let onMessageUpdated: (chunk: EnrichedStructuredChunk) => void;
+	let onDone: () => void;
 
 	beforeEach(() => {
 		pinia = createPinia();
 		setActivePinia(pinia);
+		onMessageUpdated = () => {};
+		onDone = () => {};
 
 		mockRoute.params = {};
 		mockRoute.query = {};
 		mockRouterPush.mockClear();
 
 		vi.mocked(chatApi.sendMessageApi).mockClear();
+		vi.mocked(chatApi.sendMessageApi).mockImplementation((_ctx, _, onMessageUpdated_, onDone_) => {
+			onMessageUpdated = onMessageUpdated_;
+			onDone = onDone_;
+		});
 		vi.mocked(chatApi.editMessageApi).mockClear();
+		vi.mocked(chatApi.editMessageApi).mockImplementation(
+			(_ctx, _sessionId, _editId, _payload, onMessageUpdated_, onDone_) => {
+				onMessageUpdated = onMessageUpdated_;
+				onDone = onDone_;
+			},
+		);
 		vi.mocked(chatApi.regenerateMessageApi).mockClear();
+		vi.mocked(chatApi.regenerateMessageApi).mockImplementation(
+			(_ctx, _sessionId, _retryId, _payload, onMessageUpdated_, onDone_) => {
+				onMessageUpdated = onMessageUpdated_;
+				onDone = onDone_;
+			},
+		);
 		vi.mocked(chatApi.stopGenerationApi).mockClear();
 
 		vi.mocked(chatApi.fetchChatModelsApi).mockResolvedValue(
@@ -224,47 +245,6 @@ describe('ChatView', () => {
 
 			mockRoute.query = { agentId: 'agent-123' };
 
-			vi.mocked(chatApi.sendMessageApi).mockImplementation(
-				(_ctx, payload, onMessageUpdated, onDone) => {
-					void Promise.resolve().then(async () => {
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'begin',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-123',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'item',
-								content: 'Hello! How can I help?',
-								metadata: {
-									messageId: 'ai-message-123',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'end',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-123',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onDone();
-					});
-				},
-			);
-
 			const rendered = renderComponent({ pinia });
 
 			const textarea = (await rendered.findByRole('textbox')) as HTMLTextAreaElement;
@@ -287,7 +267,43 @@ describe('ChatView', () => {
 			);
 
 			const apiCallArgs = vi.mocked(chatApi.sendMessageApi).mock.calls[0];
+			const messageIdFromApi = apiCallArgs[1].messageId;
 			const sessionIdFromApi = apiCallArgs[1].sessionId;
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'begin',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-123',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'item',
+					content: 'Hello! How can I help?',
+					metadata: {
+						messageId: 'ai-message-123',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'end',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-123',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onDone();
 
 			expect(mockRouterPush).toHaveBeenCalledWith({
 				name: 'chat-conversation',
@@ -339,47 +355,6 @@ describe('ChatView', () => {
 				}),
 			);
 
-			vi.mocked(chatApi.sendMessageApi).mockImplementation(
-				(_ctx, payload, onMessageUpdated, onDone) => {
-					void Promise.resolve().then(async () => {
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'begin',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-456',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'item',
-								content: 'AI response here',
-								metadata: {
-									messageId: 'ai-message-456',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'end',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-456',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onDone();
-					});
-				},
-			);
-
 			const rendered = renderComponent({ pinia });
 
 			const textarea = (await rendered.findByRole('textbox')) as HTMLTextAreaElement;
@@ -402,6 +377,44 @@ describe('ChatView', () => {
 				expect.any(Function),
 			);
 
+			const apiCallArgs = vi.mocked(chatApi.sendMessageApi).mock.calls[0];
+			const messageIdFromApi = apiCallArgs[1].messageId;
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'begin',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-456',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'item',
+					content: 'AI response here',
+					metadata: {
+						messageId: 'ai-message-456',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'end',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-456',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onDone();
+
 			expect(await rendered.findByText('AI response here')).toBeInTheDocument();
 
 			const messages = rendered.queryAllByTestId('chat-message');
@@ -419,34 +432,6 @@ describe('ChatView', () => {
 
 			mockRoute.query = { agentId: 'agent-123' };
 
-			vi.mocked(chatApi.sendMessageApi).mockImplementation(
-				(_ctx, payload, onMessageUpdated, _onDone) => {
-					void Promise.resolve().then(async () => {
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'begin',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-123',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'item',
-								content: 'Starting response...',
-								metadata: {
-									messageId: 'ai-message-123',
-									previousMessageId: payload.messageId,
-								},
-							}),
-						);
-					});
-				},
-			);
-
 			vi.mocked(chatApi.stopGenerationApi).mockResolvedValue(undefined);
 
 			const rendered = renderComponent({ pinia });
@@ -455,10 +440,33 @@ describe('ChatView', () => {
 			await user.click(textarea);
 			await user.type(textarea, 'Hello, AI!{Enter}');
 
-			await user.click(await rendered.findByRole('button', { name: /stop generating/i }));
-
 			const sendApiCall = vi.mocked(chatApi.sendMessageApi).mock.calls[0];
+			const messageIdFromApi = sendApiCall[1].messageId;
 			const sessionId = sendApiCall[1].sessionId;
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'begin',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-123',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'item',
+					content: 'Starting response...',
+					metadata: {
+						messageId: 'ai-message-123',
+						previousMessageId: messageIdFromApi,
+					},
+				}),
+			);
+
+			await user.click(await rendered.findByRole('button', { name: /stop generating/i }));
 
 			expect(chatApi.stopGenerationApi).toHaveBeenCalledWith(
 				expect.anything(),
@@ -509,57 +517,11 @@ describe('ChatView', () => {
 				}),
 			);
 
-			vi.mocked(chatApi.regenerateMessageApi).mockImplementation(
-				(_ctx, _sessionId, _retryId, _payload, onMessageUpdated, onDone) => {
-					void Promise.resolve().then(async () => {
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'begin',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-retry-123',
-									retryOfMessageId: 'msg-2',
-									previousMessageId: 'msg-1',
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'item',
-								content: 'Regenerated: 2+2=4',
-								metadata: {
-									messageId: 'ai-message-retry-123',
-									retryOfMessageId: 'msg-2',
-									previousMessageId: 'msg-1',
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'end',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-retry-123',
-									retryOfMessageId: 'msg-2',
-									previousMessageId: 'msg-1',
-								},
-							}),
-						);
-
-						onDone();
-					});
-				},
-			);
-
 			const rendered = renderComponent({ pinia });
 
 			expect(await rendered.findByText('Original response: 4')).toBeInTheDocument();
 
 			await user.click(await rendered.findByRole('button', { name: 'Regenerate' }));
-
-			expect(await rendered.findByText('Regenerated: 2+2=4')).toBeInTheDocument();
 
 			expect(chatApi.regenerateMessageApi).toHaveBeenCalledWith(
 				expect.anything(),
@@ -573,6 +535,46 @@ describe('ChatView', () => {
 				expect.any(Function),
 				expect.any(Function),
 			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'begin',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-retry-123',
+						retryOfMessageId: 'msg-2',
+						previousMessageId: 'msg-1',
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'item',
+					content: 'Regenerated: 2+2=4',
+					metadata: {
+						messageId: 'ai-message-retry-123',
+						retryOfMessageId: 'msg-2',
+						previousMessageId: 'msg-1',
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'end',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-retry-123',
+						retryOfMessageId: 'msg-2',
+						previousMessageId: 'msg-1',
+					},
+				}),
+			);
+
+			onDone();
+
+			expect(await rendered.findByText('Regenerated: 2+2=4')).toBeInTheDocument();
 		});
 
 		it('edits message and regenerates response when user edits their message', async () => {
@@ -610,47 +612,6 @@ describe('ChatView', () => {
 				}),
 			);
 
-			vi.mocked(chatApi.editMessageApi).mockImplementation(
-				(_ctx, _sessionId, _editId, _payload, onMessageUpdated, onDone) => {
-					void Promise.resolve().then(async () => {
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'begin',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-edit-123',
-									previousMessageId: 'msg-1',
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'item',
-								content: 'Updated answer',
-								metadata: {
-									messageId: 'ai-message-edit-123',
-									previousMessageId: 'msg-1',
-								},
-							}),
-						);
-
-						onMessageUpdated(
-							createMockStreamChunk({
-								type: 'end',
-								content: '',
-								metadata: {
-									messageId: 'ai-message-edit-123',
-									previousMessageId: 'msg-1',
-								},
-							}),
-						);
-
-						onDone();
-					});
-				},
-			);
-
 			const rendered = renderComponent({ pinia });
 
 			expect(await rendered.findByText('Original answer')).toBeInTheDocument();
@@ -666,8 +627,6 @@ describe('ChatView', () => {
 
 			await user.click(await within(userMessage).findByRole('button', { name: 'Send' }));
 
-			expect(await rendered.findByText('Updated answer')).toBeInTheDocument();
-
 			expect(chatApi.editMessageApi).toHaveBeenCalledWith(
 				expect.anything(),
 				'existing-session-123',
@@ -682,6 +641,43 @@ describe('ChatView', () => {
 				expect.any(Function),
 				expect.any(Function),
 			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'begin',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-edit-123',
+						previousMessageId: 'msg-1',
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'item',
+					content: 'Updated answer',
+					metadata: {
+						messageId: 'ai-message-edit-123',
+						previousMessageId: 'msg-1',
+					},
+				}),
+			);
+
+			onMessageUpdated(
+				createMockStreamChunk({
+					type: 'end',
+					content: '',
+					metadata: {
+						messageId: 'ai-message-edit-123',
+						previousMessageId: 'msg-1',
+					},
+				}),
+			);
+
+			onDone();
+
+			expect(await rendered.findByText('Updated answer')).toBeInTheDocument();
 		});
 
 		it('switches to alternative response when user selects alternative', async () => {
