@@ -55,6 +55,7 @@ export function getRunData(
 	workflowData: IWorkflowBase,
 	inputData?: INodeExecutionData[],
 	parentExecution?: RelatedExecution,
+	pushRef?: string,
 ): IWorkflowExecutionDataProcess {
 	const mode = 'integrated';
 
@@ -89,6 +90,7 @@ export function getRunData(
 		executionMode: mode,
 		executionData: runExecutionData,
 		workflowData,
+		pushRef,
 	};
 }
 
@@ -163,7 +165,8 @@ export async function executeWorkflow(
 		(await getWorkflowData(workflowInfo, options.parentWorkflowId, options.parentWorkflowSettings));
 
 	const runData =
-		options.loadedRunData ?? getRunData(workflowData, options.inputData, options.parentExecution);
+		options.loadedRunData ??
+		getRunData(workflowData, options.inputData, options.parentExecution, additionalData.pushRef);
 
 	const executionId = await activeExecutions.add(runData);
 
@@ -237,6 +240,7 @@ async function startExecution(
 			workflowData,
 			additionalData.userId,
 			options.parentExecution,
+			runData.pushRef,
 		);
 		additionalDataIntegrated.executionId = executionId;
 		additionalDataIntegrated.parentCallbackManager = options.parentCallbackManager;
