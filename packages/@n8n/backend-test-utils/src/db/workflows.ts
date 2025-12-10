@@ -1,4 +1,4 @@
-import type { SharedWorkflow, IWorkflowDb, WorkflowPublishHistory } from '@n8n/db';
+import type { SharedWorkflow, IWorkflowDb, WorkflowPublishHistory, WorkflowHistory } from '@n8n/db';
 import {
 	Project,
 	User,
@@ -246,6 +246,7 @@ export async function createWorkflowHistory(
 	workflow: IWorkflowDb,
 	userOrProject?: User | Project,
 	withPublishHistory?: Partial<WorkflowPublishHistory>,
+	overrides: Partial<WorkflowHistory> = {},
 ): Promise<void> {
 	await Container.get(WorkflowHistoryRepository).insert({
 		workflowId: workflow.id,
@@ -253,6 +254,7 @@ export async function createWorkflowHistory(
 		nodes: workflow.nodes,
 		connections: workflow.connections,
 		authors: userOrProject instanceof User ? userOrProject.email : 'test@example.com',
+		...overrides,
 	});
 
 	if (withPublishHistory) {

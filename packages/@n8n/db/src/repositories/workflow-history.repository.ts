@@ -53,38 +53,21 @@ export class WorkflowHistoryRepository extends Repository<WorkflowHistory> {
 
 	makeSkipActiveAndNamedVersionsRule(activeVersions: string[]) {
 		return (
-			_prev: GroupedWorkflowHistory<WorkflowHistory>,
-			next: GroupedWorkflowHistory<WorkflowHistory>,
-			// diff: WorkflowDiff<WorkflowHistory['nodes']>,
+			prev: GroupedWorkflowHistory<WorkflowHistory>,
+			_next: GroupedWorkflowHistory<WorkflowHistory>,
 		): boolean =>
-			!!next.to.name || !!next.to.description || activeVersions.includes(next.to.versionId);
+			prev.to.name !== null ||
+			prev.to.description !== null ||
+			activeVersions.includes(prev.to.versionId);
 	}
 
 	async pruneHistory(now = new Date()): Promise<number> {
-		// const { pruneDataMaxAge, pruneDataMaxCount } = this.globalConfig.executions;
-
-		//
-
-		// Find ids of all executions that were stopped longer that pruneDataMaxAge ago
 		const endDate = new Date(now);
 		endDate.setHours(endDate.getHours() - this.minimumCompactAgeHours);
 
 		const startDate = new Date(now);
 		startDate.setHours(endDate.getHours() - this.minimumCompactAgeHours);
 		startDate.setDate(startDate.getDate() - this.compactingTimeRangeDays);
-
-		// 1. Get workflows with recent changes
-
-		// const allVersions = await this.manager
-		// 	.createQueryBuilder(WorkflowHistory, 'wh')
-		// 	.where('wh.createdAt <= :endDate', {
-		// 		endDate: DateUtils.mixedDateToUtcDatetimeString(endDate),
-		// 	})
-		// 	.andWhere('wh.createdAt >= :startDate', {
-		// 		startDate: DateUtils.mixedDateToUtcDatetimeString(startDate),
-		// 	})
-		// 	.orderBy('wh.workflowId', 'ASC')
-		// 	.getRawMany<never>();
 
 		const allVersions = await this.manager
 			.createQueryBuilder(WorkflowHistory, 'wh')

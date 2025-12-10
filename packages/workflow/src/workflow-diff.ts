@@ -254,7 +254,7 @@ export function groupWorkflows<W extends WorkflowDiffBase = WorkflowDiffBase>(
 			for (const rule of rules) {
 				const shouldMerge = rule(diffs[i - 1], diffs[i], diff);
 				if (shouldMerge) {
-					const right = diffs.pop();
+					const right = diffs.splice(i, 1)[0];
 					if (!right) throw new Error('invariant broken');
 
 					// merge diffs
