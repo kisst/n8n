@@ -170,7 +170,7 @@ onMounted(() => {
 			<ChatSidebarLink
 				:to="{ name: CHAT_PERSONAL_AGENTS_VIEW }"
 				:label="i18n.baseText('chatHub.sidebar.link.personalAgents')"
-				icon="robot"
+				icon="message-square"
 				:active="route.name === CHAT_PERSONAL_AGENTS_VIEW"
 				@click="sidebar.toggleOpen(false)"
 			/>
