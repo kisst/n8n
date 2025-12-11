@@ -120,6 +120,7 @@ const menu = computed(() => {
 					return {
 						id,
 						icon: agent.icon ?? agentDefaultIcon,
+						iconSize: 'large',
 						title: truncateBeforeLast(agent.name, MAX_AGENT_NAME_CHARS_MENU),
 						disabled: false,
 					};
@@ -135,24 +136,16 @@ const menu = computed(() => {
 					return {
 						id,
 						icon: agent.icon ?? agentDefaultIcon,
+						iconSize: 'large',
 						title: truncateBeforeLast(agent.name, MAX_AGENT_NAME_CHARS_MENU),
 						disabled: false,
 					};
 				});
 
 		menuItems.push({
-			id: 'n8n-agents',
-			title: i18n.baseText('chatHub.agent.workflowAgents'),
-			icon: 'robot',
-			iconSize: 'large',
-			iconMargin: false,
-			submenu: n8nAgentsSubmenu,
-		});
-
-		menuItems.push({
 			id: 'custom-agents',
 			title: i18n.baseText('chatHub.agent.personalAgents'),
-			icon: 'robot',
+			icon: 'message-square',
 			iconSize: 'large',
 			iconMargin: false,
 			submenu: [
@@ -167,10 +160,20 @@ const menu = computed(() => {
 				{
 					id: NEW_AGENT_MENU_ID,
 					icon: 'plus',
+					iconSize: 'large',
 					title: i18n.baseText('chatHub.agent.newAgent'),
 					disabled: false,
 				},
 			],
+		});
+
+		menuItems.push({
+			id: 'n8n-agents',
+			title: i18n.baseText('chatHub.agent.workflowAgents'),
+			icon: 'robot',
+			iconSize: 'large',
+			iconMargin: false,
+			submenu: n8nAgentsSubmenu,
 		});
 
 		menuItems.push({ isDivider: true as const, id: 'agents-divider' });
@@ -184,6 +187,7 @@ const menu = computed(() => {
 		const configureMenu = {
 			id: `${provider}::configure`,
 			icon: 'settings' as const,
+			iconSize: 'large' as const,
 			title: i18n.baseText('chatHub.agent.configureCredentials'),
 			disabled: false,
 		};
@@ -269,6 +273,7 @@ const menu = computed(() => {
 						{
 							id: `${provider}::add-model`,
 							icon: 'plus',
+							iconSize: 'large',
 							title: i18n.baseText('chatHub.agent.addModel'),
 							disabled: false,
 						} as const,
