@@ -78,7 +78,7 @@ export class ExecutionEntity {
 	 * ID of the parent execution if this execution is a subworkflow (mode='integrated').
 	 * Null for top-level executions.
 	 */
-	@Column({ nullable: true })
+	@Column({ type: 'varchar', nullable: true })
 	parentExecutionId: string | null;
 
 	@DateTimeColumn({ nullable: true })
